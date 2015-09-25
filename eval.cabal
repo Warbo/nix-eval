@@ -17,9 +17,21 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  -- exposed-modules:     
+  exposed-modules:     Language.Eval.Internal
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.9
+                     , process
   hs-source-dirs:      src
   default-language:    Haskell2010
+
+test-suite tests
+  default-language:    Haskell2010
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      tests
+  main-is:             Main.hs
+  build-depends:       base >= 4.7
+                     , QuickCheck
+                     , tasty >= 0.7
+                     , tasty-quickcheck
+                     , eval

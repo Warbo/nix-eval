@@ -9,6 +9,8 @@ main = defaultMain $ testGroup "All tests" [
     testProperty "Can eval unit" unitEval
   ]
 
-unitEval = monadicIO $ do
-  result <- run $ eval (raw "()")
-  assert (result == Just (raw "()"))
+unitEval = once $ ioProperty $ do
+  result <- eval (raw "()")
+  return (result === Just (raw "()"))
+
+--debug = monitor . counterexample . show

@@ -1,5 +1,7 @@
 module Language.Eval.Internal where
 
+import Data.Char
+import Data.List
 import System.Exit
 import System.IO
 import System.Process
@@ -15,6 +17,11 @@ instance Eq Expr where
     where perm  xs ys = allIn xs ys && allIn ys xs
           allIn xs ys = all (`elem` ys) xs
 
+instance Show Expr where
+  show (Expr (ps, ms, e)) = concat ["(build-depends: ", show ps,
+                                    ", imports: ",      show ms,
+                                    ", expr: ",         e]
+
 raw :: String -> Expr
 raw s = Expr ([], [], s)
 
@@ -28,10 +35,17 @@ eval x@(Expr (pkgs, mods, expr)) = do
       ExitFailure _ -> Nothing
 
 mkCmd :: Expr -> (String, [String])
-mkCmd x = ("", [])
+mkCmd (Expr (ps, _, _)) = ("nix-shell",
+                            ["--run", "runhaskell", "-p", mkGhcPkg ps])
+
+mkGhcPkg ps = let names = map (\(Pkg p) -> p) ps
+                  pkgs  = intercalate ", " . map ("h." ++) $ names
+               in concat ["haskellPackages.ghcWithPackages ",
+                          "(h: [", pkgs, "])"]
 
 mkHs :: Expr -> String
-mkHs = const ""
+mkHs (Expr (_, ms, e)) = unlines (imports ++ ["main = print (" ++ e ++ ")"])
+  where imports = map (\(Mod m) -> "import " ++ m) ms
 
 trim :: String -> String
-trim = reverse . dropWhile (== ' ') . reverse . dropWhile (== ' ')
+trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace

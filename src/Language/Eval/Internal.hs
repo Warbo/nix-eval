@@ -2,14 +2,18 @@ module Language.Eval.Internal where
 
 import Data.Char
 import Data.List
+import Data.String
 import System.Exit
 import System.IO
 import System.Process
 
+-- We're stringly typed, with a veneer of safety
+
 newtype Pkg  = Pkg String deriving (Eq, Ord, Show)
 newtype Mod  = Mod String deriving (Eq, Ord, Show)
-newtype Expr = Expr ([Pkg], [Mod], String)
+newtype Expr = Expr ([Pkg], [Mod], String) deriving (Show)
 
+-- Allow permutations of package and module lists
 instance Eq Expr where
   (Expr (p1, m1, e1)) == (Expr (p2, m2, e2)) = e1 == e2   &&
                                                perm p1 p2 &&
@@ -17,35 +21,70 @@ instance Eq Expr where
     where perm  xs ys = allIn xs ys && allIn ys xs
           allIn xs ys = all (`elem` ys) xs
 
-instance Show Expr where
-  show (Expr (ps, ms, e)) = concat ["(build-depends: ", show ps,
-                                    ", imports: ",      show ms,
-                                    ", expr: ",         e]
+-- For convenience
 
-raw :: String -> Expr
-raw s = Expr ([], [], s)
+instance IsString Expr where
+  fromString = raw
 
-eval :: Expr -> IO (Maybe Expr)
+instance IsString Pkg where
+  fromString = Pkg
+
+instance IsString Mod where
+  fromString = Mod
+
+-- Evaluation via `nix-shell`
+
+-- | Evaluate an `Expr`; this is where the magic happens! If successful, returns
+--   `Just` a `String`, which you can do what you like with.
+eval :: Expr -> IO (Maybe String)
 eval x@(Expr (pkgs, mods, expr)) = do
     (code, out, err) <- let (cmd, args) = mkCmd x
                          in readProcessWithExitCode cmd args (mkHs x)
     hPutStr stderr err
     return $ case code of
-      ExitSuccess   -> Just (Expr (pkgs, mods, trim out))
+      ExitSuccess   -> Just (trim out)
       ExitFailure _ -> Nothing
 
 mkCmd :: Expr -> (String, [String])
-mkCmd (Expr (ps, _, _)) = ("nix-shell",
-                            ["--run", "runhaskell", "-p", mkGhcPkg ps])
+mkCmd (Expr (ps, _, _)) = ("nix-shell", ["--run", "runhaskell",
+                                         "-p", mkGhcPkg ps])
 
-mkGhcPkg ps = let names = map (\(Pkg p) -> p) ps
-                  pkgs  = intercalate ", " . map ("h." ++) $ names
+-- The prefix "h." is arbitrary, as long as it matches the argument "h:"
+mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
                in concat ["haskellPackages.ghcWithPackages ",
-                          "(h: [", pkgs, "])"]
+                          "(h: [", unwords pkgs, "])"]
 
 mkHs :: Expr -> String
-mkHs (Expr (_, ms, e)) = unlines (imports ++ ["main = print (" ++ e ++ ")"])
+mkHs (Expr (_, ms, e)) = unlines (imports ++ [main])
   where imports = map (\(Mod m) -> "import " ++ m) ms
+        main    = "main = putStr (show (" ++ e ++ "))"
 
 trim :: String -> String
 trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
+-- User-facing combinators
+
+-- | A raw String of Haskell code, with no packages or modules. You can use
+--   OverloadedStrings to call this automatically.
+raw :: String -> Expr
+raw s = Expr ([], [], s)
+
+-- | Apply the first Expr to the second, eg. `f $$ x` ==> `f x`
+($$) :: Expr -> Expr -> Expr
+(Expr (p1, m1, e1)) $$ (Expr (p2, m2, e2)) = Expr
+  (nub (p1 ++ p2),
+   nub (m1 ++ m2),
+   concat ["((", e1, ") (", e2, "))"])
+
+-- | Convert the argument to a String, then send to `raw`
+asString :: (Show a) => a -> Expr
+asString = raw . show
+
+qualified :: Mod -> String -> Expr
+qualified (Mod m) e = Expr ([], [Mod m], m ++ "." ++ e)
+
+withMods :: [Mod] -> Expr -> Expr
+withMods ms (Expr (ps, ms', e)) = Expr (ps, ms' ++ ms, e)
+
+withPkgs :: [Pkg] -> Expr -> Expr
+withPkgs ps (Expr (ps', ms, e)) = Expr (ps' ++ ps, ms, e)

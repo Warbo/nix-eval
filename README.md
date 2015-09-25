@@ -45,4 +45,5 @@ otherwise `Nothing` is returned.
       instances.
     - Combining both package lists can make modules ambiguous.
     - If the dependencies of two packages conflict, evaluation will fail.
-    - Semantics may be altered by combining the language extensions.
+ - Language extensions are handled yet. I'll add them as and when the need
+   arises.

@@ -13,7 +13,7 @@ maintainer:          chriswarbo@gmail.com
 -- copyright:           
 category:            Language
 build-type:          Simple
--- extra-source-files:  
+extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library

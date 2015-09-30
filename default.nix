@@ -2,12 +2,12 @@
 , tasty-quickcheck
 }:
 mkDerivation {
-  pname = "eval";
+  pname = "nix-eval";
   version = "0.1.0.0";
   src = ./.;
   libraryHaskellDepends = [ base process ];
   testHaskellDepends = [ base QuickCheck tasty tasty-quickcheck ];
-  homepage = "http://chriswarbo.net/git/eval";
-  description = "Evaluate Haskell expressions";
-  license = stdenv.lib.licenses.publicDomain;
+  homepage = "http://chriswarbo.net/git/nix-eval";
+  description = "Evaluate Haskell expressions using Nix to get packages";
+  license = "GPL";
 }

@@ -21,17 +21,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 module Main where
 
+import Data.Maybe
 import Language.Eval
 import Test.QuickCheck.Monadic
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.QuickCheck
 
-main = defaultMain $ testGroup "All tests" [
-    testProperty "Can eval unit"       unitEval
-  , testProperty "Can eval sums"       sumEval
-  , testProperty "Can import modules"  modulesImport
-  , testProperty "Can import packages" packagesImport
-  ]
+main = do nix <- haveNix
+          defaultMain $ testGroup "All tests" $ if nix then [
+                testProperty "Can eval unit"       unitEval
+              , testProperty "Can eval sums"       sumEval
+              , testProperty "Can import modules"  modulesImport
+              , testProperty "Can import packages" packagesImport
+              ]
+            else []
 
 unitEval = checkIO "()" (Just "()")
 
@@ -52,6 +55,9 @@ packagesImport s = let expr = len $$ (pack $$ asString s)
 
 
 -- Helpers
+
+haveNix :: IO Bool
+haveNix = isJust <$> eval "\"\""
 
 checkIO :: Expr -> Maybe String -> Property
 checkIO i o = once $ ioProperty $ do

@@ -81,6 +81,11 @@ mkHs (Expr (_, ms, e)) = unlines (imports ++ [main])
 trim :: String -> String
 trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
+haveNix :: IO Bool
+haveNix = do
+  (c, _, _) <- readCreateProcessWithExitCode (shell "hash nix-shell") ""
+  return (c == ExitSuccess)
+
 -- User-facing combinators
 
 -- | A raw String of Haskell code, with no packages or modules. You can use

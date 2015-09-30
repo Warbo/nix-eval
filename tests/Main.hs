@@ -23,6 +23,7 @@ module Main where
 
 import Data.Maybe
 import Language.Eval
+import Language.Eval.Internal (haveNix)
 import Test.QuickCheck.Monadic
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.QuickCheck
@@ -55,9 +56,6 @@ packagesImport s = let expr = len $$ (pack $$ asString s)
 
 
 -- Helpers
-
-haveNix :: IO Bool
-haveNix = isJust <$> eval "\"\""
 
 checkIO :: Expr -> Maybe String -> Property
 checkIO i o = once $ ioProperty $ do

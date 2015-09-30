@@ -97,6 +97,7 @@ raw :: String -> Expr
 raw s = Expr ([], [], s)
 
 -- | Apply the first Expr to the second, eg. `f $$ x` ==> `f x`
+infixr 8 $$
 ($$) :: Expr -> Expr -> Expr
 (Expr (p1, m1, e1)) $$ (Expr (p2, m2, e2)) = Expr
   (nub (p1 ++ p2),

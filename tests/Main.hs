@@ -37,6 +37,7 @@ main = do nix <- haveNix
               , testProperty "Can eval sums"       sumEval
               , testProperty "Can import modules"  modulesImport
               , testProperty "Can import packages" packagesImport
+              , testProperty "$$ precedence"       precedence
               ]
             else []
 
@@ -57,6 +58,12 @@ packagesImport s = let expr = len $$ (pack $$ asString s)
   in checkIO (withPkgs ["text"] expr)
              (Just (show (length s)))
 
+precedence :: String -> Property
+precedence s =
+  checkIO (withPkgs ["text"] (qualified "Data.Text" "unpack" $$
+                              qualified "Data.Text" "pack"   $$
+                              asString s))
+          (Just (show s))
 
 -- Helpers
 

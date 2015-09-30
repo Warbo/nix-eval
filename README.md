@@ -69,3 +69,5 @@ should be parsed, so we avoid the problem; by that point, our job is done.
     - If the dependencies of two packages conflict, evaluation will fail.
  - Language extensions aren't handled yet. I'll add them as and when the need
    arises.
+ - As with any kind of `eval`, there is absolutely no security. Do not pass
+   potentially-malicious user input to this library.

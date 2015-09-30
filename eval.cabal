@@ -6,7 +6,7 @@ version:             0.1.0.0
 synopsis:            Evaluate Haskell expressions
 -- description:         
 homepage:            http://chriswarbo.net/git/eval
-license:             PublicDomain
+license:             GPL
 license-file:        LICENSE
 author:              Chris Warburton
 maintainer:          chriswarbo@gmail.com
@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Language.Eval.Internal
+                     , Language.Eval
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.9

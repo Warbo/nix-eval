@@ -73,14 +73,17 @@ mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
                in concat ["haskellPackages.ghcWithPackages ",
                           "(h: [", unwords pkgs, "])"]
 
+-- | Turn an expression into a Haskell module, complete with imports and `main`
 mkHs :: Expr -> String
 mkHs (Expr (_, ms, e)) = unlines (imports ++ [main])
   where imports = map (\(Mod m) -> "import " ++ m) ms
         main    = "main = putStr (" ++ e ++ ")"
 
+-- | Strip leading and trailing whitespace
 trim :: String -> String
 trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
+-- | Check if the `nix-shell` command is available via the shell
 haveNix :: IO Bool
 haveNix = do
   (c, _, _) <- readCreateProcessWithExitCode (shell "hash nix-shell") ""
@@ -104,11 +107,15 @@ raw s = Expr ([], [], s)
 asString :: (Show a) => a -> Expr
 asString = raw . show
 
+-- | Qualify an expression, eg. `qualified "Data.Bool" "not"` gives the
+--   expression `Data.Bool.not` with "Data.Bool" in its module list
 qualified :: Mod -> String -> Expr
 qualified (Mod m) e = Expr ([], [Mod m], m ++ "." ++ e)
 
+-- | Append modules to an expression's context
 withMods :: [Mod] -> Expr -> Expr
 withMods ms (Expr (ps, ms', e)) = Expr (ps, ms' ++ ms, e)
 
+-- | Append packages to an expression's context
 withPkgs :: [Pkg] -> Expr -> Expr
 withPkgs ps (Expr (ps', ms, e)) = Expr (ps' ++ ps, ms, e)

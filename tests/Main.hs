@@ -28,6 +28,9 @@ import Test.QuickCheck.Monadic
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.QuickCheck
 
+-- | Only test if `nix-shell` is available. In particular, when Nix builds and
+--   tests this package, it uses a pure environment where nix-shell isn't
+--   available
 main = do nix <- haveNix
           defaultMain $ testGroup "All tests" $ if nix then [
                 testProperty "Can eval unit"       unitEval

@@ -9,7 +9,7 @@ let
       }:
       mkDerivation {
         pname = "nix-eval";
-        version = "0.1.0.0";
+        version = "0.1.0.1";
         src = ./.;
         libraryHaskellDepends = [ base process ];
         testHaskellDepends = [ base QuickCheck tasty tasty-quickcheck ];

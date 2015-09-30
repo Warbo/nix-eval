@@ -76,7 +76,7 @@ mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
 mkHs :: Expr -> String
 mkHs (Expr (_, ms, e)) = unlines (imports ++ [main])
   where imports = map (\(Mod m) -> "import " ++ m) ms
-        main    = "main = putStr (show (" ++ e ++ "))"
+        main    = "main = putStr (" ++ e ++ ")"
 
 trim :: String -> String
 trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace

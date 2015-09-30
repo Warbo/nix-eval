@@ -39,8 +39,9 @@ sumEval :: [Int] -> Property
 sumEval s = checkIO ("sum" $$ asString s)
                     (Just (show (sum s)))
 
-modulesImport = checkIO (qualified "Data.Maybe" "isNothing" $$ "Nothing")
-                        (Just "True")
+modulesImport =
+  checkIO (qualified "Data.Maybe" "isNothing" $$ "Nothing")
+          (Just "True")
 
 packagesImport :: String -> Property
 packagesImport s = let expr = len $$ (pack $$ asString s)
@@ -54,5 +55,5 @@ packagesImport s = let expr = len $$ (pack $$ asString s)
 
 checkIO :: Expr -> Maybe String -> Property
 checkIO i o = once $ ioProperty $ do
-  result <- eval i
+  result <- eval ("show" $$ i)
   return (result === o)

@@ -56,13 +56,21 @@ instance IsString Mod where
 -- | Evaluate an `Expr`; this is where the magic happens! If successful, returns
 --   `Just` a `String`, which you can do what you like with.
 eval :: Expr -> IO (Maybe String)
-eval x@(Expr (pkgs, mods, expr)) = do
-    (code, out, err) <- let (cmd, args) = mkCmd x
-                         in readProcessWithExitCode cmd args (mkHs x)
-    hPutStr stderr err
-    return $ case code of
-      ExitSuccess   -> Just (trim out)
-      ExitFailure _ -> Nothing
+eval = eval' mkHs
+
+-- | Same as `eval`, but allows a custom formatting function to be supplied, eg.
+--   if you want an alternative to the default "main = putStr (..)" behaviour.
+eval' :: (String -> String) -> Expr -> IO (Maybe String)
+eval' f x@(Expr (pkgs, mods, expr))= do
+  (code, out, err) <- let (cmd, args) = mkCmd x
+                       in readProcessWithExitCode cmd
+                                                  args
+                                                  (unlines [mkImports mods,
+                                                            f expr])
+  hPutStr stderr err
+  return $ case code of
+    ExitSuccess   -> Just (trim out)
+    ExitFailure _ -> Nothing
 
 mkCmd :: Expr -> (String, [String])
 mkCmd (Expr (ps, _, _)) = ("nix-shell", ["--run", "runhaskell",
@@ -73,11 +81,12 @@ mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
                in concat ["haskellPackages.ghcWithPackages ",
                           "(h: [", unwords pkgs, "])"]
 
+mkImports :: [Mod] -> String
+mkImports = unlines . map (\(Mod m) -> "import " ++ m)
+
 -- | Turn an expression into a Haskell module, complete with imports and `main`
-mkHs :: Expr -> String
-mkHs (Expr (_, ms, e)) = unlines (imports ++ [main])
-  where imports = map (\(Mod m) -> "import " ++ m) ms
-        main    = "main = putStr (" ++ e ++ ")"
+mkHs :: String -> String
+mkHs e = "main = putStr (" ++ e ++ ")"
 
 -- | Strip leading and trailing whitespace
 trim :: String -> String

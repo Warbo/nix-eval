@@ -119,8 +119,8 @@ asString = raw . show
 
 -- | Qualify an expression, eg. `qualified "Data.Bool" "not"` gives the
 --   expression `Data.Bool.not` with "Data.Bool" in its module list
-qualified :: Mod -> String -> Expr
-qualified (Mod m) e = Expr ([], [Mod m], m ++ "." ++ e)
+qualified :: Mod -> Expr -> Expr
+qualified (Mod m) (Expr (ps, ms, e)) = Expr (ps, Mod m:ms, m ++ "." ++ e)
 
 -- | Append modules to an expression's context
 withMods :: [Mod] -> Expr -> Expr

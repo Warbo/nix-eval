@@ -82,12 +82,17 @@ eval' f x = do
   (code, out, err) <- let (cmd, args) = mkCmd x
                        in readProcessWithExitCode cmd
                                                   args
-                                                  (unlines [mkImports mods,
-                                                            f expr])
+                                                  (unlines (pragma (eFlags x) ++
+                                                            [mkImports mods,
+                                                            f expr]))
   hPutStr stderr err
   return $ case code of
     ExitSuccess   -> Just (trim out)
     ExitFailure _ -> Nothing
+
+pragma [] = []
+pragma xs = let fs = map (\(Flag x) -> x) xs
+             in [concat ["{-# LANGAUGE ", intercalate ", " fs, "#-}"]]
 
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])

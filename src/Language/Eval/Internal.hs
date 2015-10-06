@@ -63,6 +63,9 @@ instance IsString Pkg where
 instance IsString Mod where
   fromString = Mod
 
+instance IsString Flag where
+  fromString = Flag
+
 -- Evaluation via `nix-shell`
 
 -- | Evaluate an `Expr`; this is where the magic happens! If successful, returns

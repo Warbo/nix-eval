@@ -28,15 +28,27 @@ import System.Process
 
 -- We're stringly typed, with a veneer of safety
 
-newtype Pkg  = Pkg String deriving (Eq, Ord, Show)
-newtype Mod  = Mod String deriving (Eq, Ord, Show)
-newtype Expr = Expr ([Pkg], [Mod], String) deriving (Show)
+newtype Pkg  = Pkg  String deriving (Eq, Ord, Show)
+newtype Mod  = Mod  String deriving (Eq, Ord, Show)
+newtype Flag = Flag String deriving (Eq, Ord, Show)
+
+data Expr = Expr {
+    ePkgs :: [Pkg]
+    -- ^ Packages
+  , eMods :: [Mod]
+    -- ^ Modules
+  , eFlags :: [Flag]
+    -- ^ Required runhaskell arguments
+  , eExpr :: String
+    -- ^ The Haskell expression
+  } deriving (Show)
 
 -- Allow permutations of package and module lists
 instance Eq Expr where
-  (Expr (p1, m1, e1)) == (Expr (p2, m2, e2)) = e1 == e2   &&
-                                               perm p1 p2 &&
-                                               perm m1 m2
+  e1 == e2 = eExpr e1 == eExpr e2       &&
+             perm (ePkgs e1) (ePkgs e2) &&
+             perm (eMods e1) (eMods e2) &&
+             perm (eFlags e1) (eFlags e2)
     where perm  xs ys = allIn xs ys && allIn ys xs
           allIn xs ys = all (`elem` ys) xs
 
@@ -61,7 +73,9 @@ eval = eval' mkHs
 -- | Same as `eval`, but allows a custom formatting function to be supplied, eg.
 --   if you want an alternative to the default "main = putStr (..)" behaviour.
 eval' :: (String -> String) -> Expr -> IO (Maybe String)
-eval' f x@(Expr (pkgs, mods, expr))= do
+eval' f x = do
+  let mods  = eMods x
+      expr  = eExpr x
   (code, out, err) <- let (cmd, args) = mkCmd x
                        in readProcessWithExitCode cmd
                                                   args
@@ -73,8 +87,9 @@ eval' f x@(Expr (pkgs, mods, expr))= do
     ExitFailure _ -> Nothing
 
 mkCmd :: Expr -> (String, [String])
-mkCmd (Expr (ps, _, _)) = ("nix-shell", ["--run", "runhaskell",
-                                         "-p", mkGhcPkg ps])
+mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])
+  where pkgs = ePkgs x
+        run  = intercalate " " ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
 
 -- The prefix "h." is arbitrary, as long as it matches the argument "h:"
 mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
@@ -103,15 +118,16 @@ haveNix = do
 -- | A raw String of Haskell code, with no packages or modules. You can use
 --   OverloadedStrings to call this automatically.
 raw :: String -> Expr
-raw s = Expr ([], [], s)
+raw s = Expr { ePkgs = [], eMods = [], eExpr = s, eFlags = [] }
 
 -- | Apply the first Expr to the second, eg. `f $$ x` ==> `f x`
 infixr 8 $$
 ($$) :: Expr -> Expr -> Expr
-(Expr (p1, m1, e1)) $$ (Expr (p2, m2, e2)) = Expr
-  (nub (p1 ++ p2),
-   nub (m1 ++ m2),
-   concat ["((", e1, ") (", e2, "))"])
+x $$ y = Expr {
+  ePkgs  = nub (ePkgs x ++ ePkgs y),
+  eMods  = nub (eMods x ++ eMods y),
+  eFlags = nub (eFlags x ++ eFlags y),
+  eExpr  = concat ["((", eExpr x, ") (", eExpr y, "))"] }
 
 -- | Convert the argument to a String, then send to `raw`
 asString :: (Show a) => a -> Expr
@@ -120,12 +136,17 @@ asString = raw . show
 -- | Qualify an expression, eg. `qualified "Data.Bool" "not"` gives the
 --   expression `Data.Bool.not` with "Data.Bool" in its module list
 qualified :: Mod -> Expr -> Expr
-qualified (Mod m) (Expr (ps, ms, e)) = Expr (ps, Mod m:ms, m ++ "." ++ e)
+qualified (Mod m) x = x { eMods = (Mod m) : eMods x,
+                          eExpr = m ++ "." ++ eExpr x }
 
 -- | Append modules to an expression's context
 withMods :: [Mod] -> Expr -> Expr
-withMods ms (Expr (ps, ms', e)) = Expr (ps, ms' ++ ms, e)
+withMods ms x = x { eMods = eMods x ++ ms }
 
 -- | Append packages to an expression's context
 withPkgs :: [Pkg] -> Expr -> Expr
-withPkgs ps (Expr (ps', ms, e)) = Expr (ps' ++ ps, ms, e)
+withPkgs ps x = x { ePkgs = ePkgs x ++ ps }
+
+-- | Append arguments to an expression's context
+withFlags :: [Flag] -> Expr -> Expr
+withFlags fs x = x { eFlags = eFlags x ++ fs }

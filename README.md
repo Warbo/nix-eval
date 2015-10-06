@@ -12,21 +12,24 @@ achieved by calling out to the [Nix package manager](http://nix.nixos.org).
 # Implementation Details
 
 `Expr` is the type of expressions, which contains a list of package names, a
-list of modules to import and a `String` of Haskell code. All of these are just
-`String`s internally, but the wrappers prevent accidentally using package as
-modules, etc. A few combinators are provided for common manipulations, and the
-`OverloadedStrings` extension allows packages, modules and expressions to be
-written as literals. Note that literal expressions are given an empty context;
-you will have to specify any required modules or packages separately.
+list of modules to import, a list of compiler flags and a `String` of Haskell
+code. All of these are just `String`s internally, but the wrappers prevent
+accidentally using package as modules, etc. A few combinators are provided for
+common manipulations, and the `OverloadedStrings` extension allows packages,
+modules, flags and expressions to be written as literals. Note that literal
+expressions are given an empty context; you will have to specify any required
+modules, packages, etc. separately.
 
 When evaluated, the Haskell code is prefixed by an import of each module and
-wrapped in `main = putStr (..)`, then piped into `runhaskell`. That process is
-invoked via the `nix-shell` command, using Nix's standard
+wrapped in `main = putStr (..)`, then piped into `runhaskell`. If any flags are
+specified, they are appended as arguments to the `runhaskell` command. That
+process is invoked via the `nix-shell` command, using Nix's standard
 `haskellPackages.ghcWithPackages` function to ensure the GHC instance has all of
 the given packages available.
 
 If the process exits successfully, its stdout will be returned wrapped in
-`Just`; otherwise `Nothing` is returned.
+`Just`; otherwise `Nothing` is returned. If you wish to alter the `main`
+implementation, use `Language.Eval.Internal.eval'`
 
 This implementation is a little rough; for example, you may prefer to use `Text`
 rather than `String`; use a better representation like the syntax trees from
@@ -67,7 +70,7 @@ should be parsed, so we avoid the problem; by that point, our job is done.
       instances.
     - Combining both package lists can make modules ambiguous.
     - If the dependencies of two packages conflict, evaluation will fail.
- - Language extensions aren't handled yet. I'll add them as and when the need
-   arises.
  - As with any kind of `eval`, there is absolutely no security. Do not pass
-   potentially-malicious user input to this library.
+   potentially-malicious user input to this library! Not only can arbitrary
+   Haskell code be run (eg. using `unsafePerformIO`, but the flags are also a
+   shell injection vector.

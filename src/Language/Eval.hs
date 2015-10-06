@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 module Language.Eval (
     Pkg(..)
   , Mod(..)
+  , Flag(..)
   , Expr(..)
   , eval
   , raw
@@ -27,6 +28,7 @@ module Language.Eval (
   , asString
   , qualified
   , withMods
-  , withPkgs) where
+  , withPkgs
+  , withFlags) where
 
 import Language.Eval.Internal

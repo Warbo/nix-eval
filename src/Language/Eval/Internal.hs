@@ -97,7 +97,7 @@ pragma xs = let fs = map (\(Flag x) -> x) xs
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])
   where pkgs = ePkgs x
-        run  = intercalate " " ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
+        run  = unwords ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
 
 -- The prefix "h." is arbitrary, as long as it matches the argument "h:"
 mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
@@ -144,7 +144,7 @@ asString = raw . show
 -- | Qualify an expression, eg. `qualified "Data.Bool" "not"` gives the
 --   expression `Data.Bool.not` with "Data.Bool" in its module list
 qualified :: Mod -> Expr -> Expr
-qualified (Mod m) x = x { eMods = (Mod m) : eMods x,
+qualified (Mod m) x = x { eMods = Mod m : eMods x,
                           eExpr = m ++ "." ++ eExpr x }
 
 -- | Append modules to an expression's context

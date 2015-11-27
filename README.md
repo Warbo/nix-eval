@@ -7,7 +7,7 @@ to evaluate it.
 
 What sets this package apart from other `eval` implementations, is the ability
 to control which packages and modules are available during evaluation. This is
-achieved by calling out to the [Nix package manager](http://nix.nixos.org).
+achieved by calling out to the [Nix package manager](http://nixos.org/nix).
 
 # Implementation Details
 

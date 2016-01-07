@@ -29,6 +29,7 @@ module Language.Eval (
   , qualified
   , withMods
   , withPkgs
-  , withFlags) where
+  , withFlags
+  , withPreamble) where
 
 import Language.Eval.Internal

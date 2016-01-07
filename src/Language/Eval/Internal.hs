@@ -39,6 +39,8 @@ data Expr = Expr {
     -- ^ Modules
   , eFlags :: [Flag]
     -- ^ Required runhaskell arguments
+  , ePreamble :: [String]
+    -- ^ Extra lines to add to the generated module's top-level
   , eExpr :: String
     -- ^ The Haskell expression
   } deriving (Show)
@@ -83,8 +85,9 @@ eval' f x = do
                        in readProcessWithExitCode cmd
                                                   args
                                                   (unlines (pragma (eFlags x) ++
-                                                            [mkImports mods,
-                                                            f expr]))
+                                                            map mkImport mods ++
+                                                            ePreamble x       ++
+                                                            [f expr]))
   hPutStr stderr err
   return $ case code of
     ExitSuccess   -> Just (trim out)
@@ -104,8 +107,8 @@ mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
                in concat ["haskellPackages.ghcWithPackages ",
                           "(h: [", unwords pkgs, "])"]
 
-mkImports :: [Mod] -> String
-mkImports = unlines . map (\(Mod m) -> "import " ++ m)
+mkImport :: Mod -> String
+mkImport (Mod m) = "import " ++ m
 
 -- | Turn an expression into a Haskell module, complete with imports and `main`
 mkHs :: String -> String
@@ -126,15 +129,16 @@ haveNix = do
 -- | A raw String of Haskell code, with no packages or modules. You can use
 --   OverloadedStrings to call this automatically.
 raw :: String -> Expr
-raw s = Expr { ePkgs = [], eMods = [], eExpr = s, eFlags = [] }
+raw s = Expr { ePkgs = [], eMods = [], eExpr = s, eFlags = [], ePreamble = [] }
 
 -- | Apply the first Expr to the second, eg. `f $$ x` ==> `f x`
 infixr 8 $$
 ($$) :: Expr -> Expr -> Expr
 x $$ y = Expr {
-  ePkgs  = nub (ePkgs x ++ ePkgs y),
-  eMods  = nub (eMods x ++ eMods y),
-  eFlags = nub (eFlags x ++ eFlags y),
+  ePkgs     = nub (ePkgs     x ++ ePkgs     y),
+  eMods     = nub (eMods     x ++ eMods     y),
+  eFlags    = nub (eFlags    x ++ eFlags    y),
+  ePreamble =      ePreamble x ++ ePreamble y ,
   eExpr  = concat ["((", eExpr x, ") (", eExpr y, "))"] }
 
 -- | Convert the argument to a String, then send to `raw`
@@ -158,3 +162,6 @@ withPkgs ps x = x { ePkgs = ePkgs x ++ ps }
 -- | Append arguments to an expression's context
 withFlags :: [Flag] -> Expr -> Expr
 withFlags fs x = x { eFlags = eFlags x ++ fs }
+
+withPreamble :: String -> Expr -> Expr
+withPreamble p x = x { ePreamble = ePreamble x ++ [p] }

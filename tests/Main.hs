@@ -38,6 +38,7 @@ main = do nix <- haveNix
               , testProperty "Can import modules"  modulesImport
               , testProperty "Can import packages" packagesImport
               , testProperty "$$ precedence"       precedence
+              , testProperty "Preamble added"      preambleAdded
               ]
             else []
 
@@ -64,6 +65,11 @@ precedence s =
                               qualified "Data.Text" "pack"   $$
                               asString s))
           (Just (show s))
+
+preambleAdded :: Int -> Property
+preambleAdded i =
+  checkIO (withPreamble ("foo = " ++ show i) "foo * foo")
+          (Just (show (i * i)))
 
 -- Helpers
 

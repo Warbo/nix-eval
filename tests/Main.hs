@@ -21,9 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 module Main where
 
+import Data.List
 import Data.Maybe
 import Language.Eval
-import Language.Eval.Internal (haveNix)
+import Language.Eval.Internal
 import Test.QuickCheck.Monadic
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.QuickCheck
@@ -33,7 +34,8 @@ import Test.Tasty.QuickCheck
 --   available
 main = do nix <- haveNix
           defaultMain $ testGroup "All tests" $ if nix then [
-                testProperty "Can eval unit"       unitEval
+                testProperty "Sensible pragmas"    checkPragmas
+              , testProperty "Can eval unit"       unitEval
               , testProperty "Can eval sums"       sumEval
               , testProperty "Can import modules"  modulesImport
               , testProperty "Can import packages" packagesImport
@@ -41,6 +43,22 @@ main = do nix <- haveNix
               , testProperty "Preamble added"      preambleAdded
               ]
             else []
+
+checkPragmas = forAll (listOf (Flag <$> arbitrary)) checkPragmas'
+
+checkPragmas' :: [Flag] -> Property
+checkPragmas' ps = if null ps
+                      then p === []
+                      else conjoin checks
+  where p      = pragma ps
+        prag   = head p
+        checks = [length p === 1,
+                  pref "{-# LANGUAGE ",
+                  suff " #-}"] ++ allIn
+        allIn  = map (property . (`isInfixOf` prag) . unFlag) ps
+        unFlag (Flag x) = x
+        pref x = take (length x) prag === x
+        suff x = reverse (take (length x) (reverse prag)) === x
 
 unitEval = checkIO "()" (Just "()")
 

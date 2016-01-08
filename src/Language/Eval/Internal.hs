@@ -95,7 +95,7 @@ eval' f x = do
 
 pragma [] = []
 pragma xs = let fs = map (\(Flag x) -> x) xs
-             in [concat ["{-# LANGAUGE ", intercalate ", " fs, "#-}"]]
+             in [concat ["{-# LANGUAGE ", intercalate ", " fs, " #-}"]]
 
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])

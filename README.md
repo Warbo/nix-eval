@@ -12,20 +12,28 @@ achieved by calling out to the [Nix package manager](http://nixos.org/nix).
 # Implementation Details
 
 `Expr` is the type of expressions, which contains a list of package names, a
-list of modules to import, a list of compiler flags and a `String` of Haskell
-code. All of these are just `String`s internally, but the wrappers prevent
-accidentally using package as modules, etc. A few combinators are provided for
-common manipulations, and the `OverloadedStrings` extension allows packages,
-modules, flags and expressions to be written as literals. Note that literal
-expressions are given an empty context; you will have to specify any required
-modules, packages, etc. separately.
+list of modules to import, a list of compiler flags, a list of `String`s to
+put in the generated module and a `String` of Haskell code to evaluate. All of
+these are just `String`s internally, but we use wrappers prevent accidentally
+using packages as modules, etc.
 
-When evaluated, the Haskell code is prefixed by an import of each module and
-wrapped in `main = putStr (..)`, then piped into `runhaskell`. If any flags are
-specified, they are appended as arguments to the `runhaskell` command. That
-process is invoked via the `nix-shell` command, using Nix's standard
-`haskellPackages.ghcWithPackages` function to ensure the GHC instance has all of
-the given packages available.
+A few combinators are provided for common manipulations, for example
+`qualified "Foo" "bar"` will produce the expression `"Foo.bar"` with `"Foo"` in
+its module list. The `OverloadedStrings` extension allows packages, modules,
+flags and expressions to be written as literals. Note that literal expressions
+are given an empty context; you will have to specify any required modules,
+packages, etc. separately.
+
+When evaluated, the Haskell code is prefixed by an import of each module, the
+"preamble" strings (if any) and wrapped in `main = putStr (..)`. This code is
+piped into `runhaskell`. If any flags are specified, they are appended as
+arguments to the `runhaskell` command.
+
+The `runhaskell` process itself is invoked via the `nix-shell` command, using
+Nix's standard `haskellPackages.ghcWithPackages` function to ensure that all of
+the given packages are available. This means package names must correspond to
+the names used by Nix (which are usually the same as Hackage); it also means you
+can supply your own private packages using Nix overrides.
 
 If the process exits successfully, its stdout will be returned wrapped in
 `Just`; otherwise `Nothing` is returned. If you wish to alter the `main`
@@ -48,7 +56,8 @@ should be parsed, so we avoid the problem; by that point, our job is done.
 # Limitations
 
  - Since evaluation takes place in a separate GHC process, there can be no
-   sharing of data (unless you provide a separate mechanism like a FIFO)
+   sharing of data outside the strings provided (unless you provide a separate
+   mechanism like a FIFO)
  - Expressions are wrapped in `putStr`, so the expression must be a `String`.
    You may need to marshall your data into a form which is more amenable to
    serialising/deserialising via `String`.

@@ -34,31 +34,15 @@ import Test.Tasty.QuickCheck
 --   available
 main = do nix <- haveNix
           defaultMain $ testGroup "All tests" $ if nix then [
-                testProperty "Sensible pragmas"    checkPragmas
-              , testProperty "Can eval unit"       unitEval
+                testProperty "Can eval unit"       unitEval
               , testProperty "Can eval sums"       sumEval
               , testProperty "Can import modules"  modulesImport
               , testProperty "Can import packages" packagesImport
               , testProperty "$$ precedence"       precedence
               , testProperty "Preamble added"      preambleAdded
+              , testProperty "Flags work"          checkFlags
               ]
             else []
-
-checkPragmas = forAll (listOf (Flag <$> arbitrary)) checkPragmas'
-
-checkPragmas' :: [Flag] -> Property
-checkPragmas' ps = if null ps
-                      then p === []
-                      else conjoin checks
-  where p      = pragma ps
-        prag   = head p
-        checks = [length p === 1,
-                  pref "{-# LANGUAGE ",
-                  suff " #-}"] ++ allIn
-        allIn  = map (property . (`isInfixOf` prag) . unFlag) ps
-        unFlag (Flag x) = x
-        pref x = take (length x) prag === x
-        suff x = reverse (take (length x) (reverse prag)) === x
 
 unitEval = checkIO "()" (Just "()")
 
@@ -88,6 +72,11 @@ preambleAdded :: Int -> Property
 preambleAdded i =
   checkIO (withPreamble ("foo = " ++ show i) "foo * foo")
           (Just (show (i * i)))
+
+checkFlags :: Int -> Property
+checkFlags i = checkIO e (Just (show i))
+  where e = withFlags ["-XTemplateHaskell"] . raw $
+                "$([|" ++ show i ++ "|])"
 
 -- Helpers
 

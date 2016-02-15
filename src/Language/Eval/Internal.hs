@@ -98,9 +98,14 @@ mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])
         run  = unwords ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
 
 -- The prefix "h." is arbitrary, as long as it matches the argument "h:"
-mkGhcPkg ps = let pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
-               in concat ["haskellPackages.ghcWithPackages ",
-                          "(h: [", unwords pkgs, "])"]
+-- We need use "setName" to avoid calling everything "ghc", since that breaks
+-- nesting (Nix sees that "ghc" is already available, so doesn't bother building
+-- the new environment)
+mkGhcPkg ps = "lib.setName " ++ show name ++ " (" ++ raw ++ ")"
+  where pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
+        raw  = concat ["haskellPackages.ghcWithPackages ",
+                       "(h: [", unwords pkgs, "])"]
+        name = "ghc-with-" ++ intercalate "-" pkgs
 
 mkImport :: Mod -> String
 mkImport (Mod m) = "import " ++ m

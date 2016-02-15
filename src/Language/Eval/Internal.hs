@@ -79,18 +79,33 @@ eval = eval' mkHs
 --   if you want an alternative to the default "main = putStr (..)" behaviour.
 eval' :: (String -> String) -> Expr -> IO (Maybe String)
 eval' f x = do
-  let mods  = eMods x
-      expr  = eExpr x
-  (code, out, err) <- let (cmd, args) = mkCmd x
-                       in readProcessWithExitCode cmd
-                                                  args
-                                                  (unlines (map mkImport mods ++
-                                                            ePreamble x       ++
-                                                            [f expr]))
-  hPutStr stderr err
-  return $ case code of
-    ExitSuccess   -> Just (trim out)
-    ExitFailure _ -> Nothing
+  (out, code) <- runCmdStdIO (buildCmd x) (buildInput f x)
+  case code of
+    ExitSuccess   -> return $ Just (trim out)
+    ExitFailure _ -> hPutStr stderr out >> return Nothing
+
+-- | Runs the given command, piping the given String into stdin, returning
+--   stdout and the ExitCode. stderr is inherited.
+runCmdStdIO :: CreateProcess -> String -> IO (String, ExitCode)
+runCmdStdIO c i = do (Just hIn, Just hOut, Nothing, hProc) <- createProcess c
+                     hPutContents hIn i
+                     code <- waitForProcess hProc
+                     out  <- hGetContents   hOut
+                     return (out, code)
+
+buildInput f x = unlines (map mkImport mods ++ ePreamble x ++ [f expr])
+  where mods  = eMods x
+        expr  = eExpr x
+
+buildCmd :: Expr -> CreateProcess
+buildCmd x = let (cmd, args) = mkCmd x
+              in (proc cmd args) {
+                std_in  = CreatePipe,
+                std_out = CreatePipe,
+                std_err = Inherit
+              }
+
+hPutContents h c = hPutStr h c >> hClose h
 
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])
@@ -101,11 +116,12 @@ mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])
 -- We need use "setName" to avoid calling everything "ghc", since that breaks
 -- nesting (Nix sees that "ghc" is already available, so doesn't bother building
 -- the new environment)
-mkGhcPkg ps = "lib.setName " ++ show name ++ " (" ++ raw ++ ")"
+mkGhcPkg ps = setName name ghc
   where pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
-        raw  = concat ["haskellPackages.ghcWithPackages ",
+        ghc  = concat ["haskellPackages.ghcWithPackages ",
                        "(h: [", unwords pkgs, "])"]
         name = "ghc-with-" ++ intercalate "-" pkgs
+        setName n p = "((" ++ p ++ ").overrideDerivation (d: { name = " ++ show n ++ "; }))"
 
 mkImport :: Mod -> String
 mkImport (Mod m) = "import " ++ m

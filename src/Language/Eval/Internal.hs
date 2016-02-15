@@ -108,20 +108,20 @@ buildCmd x = let (cmd, args) = mkCmd x
 hPutContents h c = hPutStr h c >> hClose h
 
 mkCmd :: Expr -> (String, [String])
-mkCmd x = ("nix-shell", ["--run", run, "-p", mkGhcPkg pkgs])
+mkCmd x = ("nix-shell", ["--show-trace", "--run", run, "-p", mkGhcPkg pkgs])
   where pkgs = ePkgs x
         run  = unwords ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
 
 -- The prefix "h." is arbitrary, as long as it matches the argument "h:"
--- We need use "setName" to avoid calling everything "ghc", since that breaks
--- nesting (Nix sees that "ghc" is already available, so doesn't bother building
--- the new environment)
-mkGhcPkg ps = setName name ghc
+mkGhcPkg ps = overrideName ghc name
   where pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
         ghc  = concat ["haskellPackages.ghcWithPackages ",
                        "(h: [", unwords pkgs, "])"]
         name = "ghc-with-" ++ intercalate "-" pkgs
-        setName n p = "((" ++ p ++ ").overrideDerivation (d: { name = " ++ show n ++ "; }))"
+
+-- | Avoid calling everything "ghc", since that breaks nesting (Nix sees that
+--   "ghc" is already available, so doesn't bother building the new environment)
+overrideName p n = "(buildEnv { name=" ++ show n ++ ";paths=[(" ++ p ++ ")];})"
 
 mkImport :: Mod -> String
 mkImport (Mod m) = "import " ++ m

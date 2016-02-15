@@ -117,7 +117,7 @@ mkCmd x = ("nix-shell", ["--show-trace", "--run", cmd, "-p", mkGhcPkg pkgs])
         run  = unwords ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
         cmd  = wrapCmd run pkgs
 
-wrapCmd c ps = wrapperPath ++ " " ++ show c ++ " " ++ show (pkgsToName ps)
+wrapCmd c ps = "sh " ++ wrapperPath ++ " " ++ show c ++ " " ++ show (pkgsToName ps)
 
 wrapperPath :: String
 {-# NOINLINE wrapperPath #-}

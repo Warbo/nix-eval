@@ -41,6 +41,7 @@ main = do nix <- haveNix
               , testProperty "$$ precedence"       precedence
               , testProperty "Preamble added"      preambleAdded
               , testProperty "Flags work"          checkFlags
+              , testProperty "Nesting works"       checkNesting
               ]
             else []
 
@@ -78,9 +79,45 @@ checkFlags i = checkIO e (Just (show i))
   where e = withFlags ["-XTemplateHaskell"] . raw $
                 "$([|" ++ show i ++ "|])"
 
+-- Run nix-shells inside nix-shells, each with different Haskell packages
+-- available, to make sure the environments are set up correctly
+checkNesting = checkIO expr (Just "True")
+  where expr   = unwrap $$ runHaskell nested
+        unwrap = qualified "System.IO.Unsafe" "unsafePerformIO"
+        -- Runs a String of Haskell in a sub-process
+        runHaskell s = ((process $$ asString "runhaskell") $$ "[]") $$ asString s
+        process    = withPkgs ["process"] $ qualified "System.Process" "readProcess"
+        -- A String of Haskell code, which should invoke several `runhaskell`
+        -- instances inside `nix-shell`s with different elements of `pkgs`
+        -- available. The inner layer executes `base`, the others just propagate
+        -- the result back up to us
+        nested = recursiveHaskell pkgs base
+        -- A selection of non-default packages/modules
+        pkgs = [(Pkg "text",       Mod "Data.Text"),
+                (Pkg "containers", Mod "Data.Graph"),
+                (Pkg "parsec",     Mod "Text.Parsec")]
+        -- This value should be propagated up through each putStrLn
+        base = "main = putStrLn \"True\""
+
 -- Helpers
 
 checkIO :: Expr -> Maybe String -> Property
 checkIO i o = once $ ioProperty $ do
   result <- eval ("show" $$ i)
   return (result === o)
+
+mkHaskell :: Pkg -> Mod -> String -> String
+mkHaskell (Pkg pkg) (Mod mod) str = unlines [
+          "import " ++ mod,
+          "import System.Process",
+          "main = System.Process.readProcess",
+          "  \"nix-shell\"",
+          "  [\"-p\", " ++ show (pkgString pkg) ++ ", \"--run\", \"runhaskell\"]",
+          "  " ++ show str ++ " >>= putStrLn"]
+
+pkgString :: String -> String
+pkgString p = "haskellPackages.ghcWithPackages (h: [ h." ++ p ++ "])"
+
+recursiveHaskell :: [(Pkg, Mod)] -> String -> String
+recursiveHaskell []          base = base
+recursiveHaskell ((p, m):xs) base = mkHaskell p m (recursiveHaskell xs base)

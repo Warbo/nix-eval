@@ -20,7 +20,7 @@ data-files:          wrapper.sh
 library
   exposed-modules:     Language.Eval.Internal
                      , Language.Eval
-  -- other-modules:       
+  other-modules:       Paths_nix_eval
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.9
                      , process

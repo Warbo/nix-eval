@@ -102,21 +102,27 @@ checkNesting = checkIO expr (Just "True")
 -- Helpers
 
 checkIO :: Expr -> Maybe String -> Property
-checkIO i o = once $ ioProperty $ do
-  result <- eval ("show" $$ i)
-  return (result === o)
+checkIO i o = once $ monadicIO $ do
+  monitor (counterexample (show ("expression", i)))
+  monitor (counterexample (show ("expected",   o)))
+  result <- run $ eval ("show" $$ i)
+  monitor (counterexample (show ("result", result)))
+  assert (result == o)
 
 mkHaskell :: Pkg -> Mod -> String -> String
-mkHaskell (Pkg pkg) (Mod mod) str = unlines [
-          "import " ++ mod,
+mkHaskell p (Mod m) str = unlines [
           "import System.Process",
           "main = System.Process.readProcess",
-          "  \"nix-shell\"",
-          "  [\"-p\", " ++ show (pkgString pkg) ++ ", \"--run\", \"runhaskell\"]",
-          "  " ++ show str ++ " >>= putStrLn"]
+          indent (show "nix-shell"),
+          indent args',
+          indent (show inner ++ " >>= putStrLn")]
+  where inner = "import " ++ m ++ "\n" ++ str
+        args  = ["-p", mkGhcPkg [p], "--run", "runhaskell"]
+        args' = "[" ++ intercalate "," (map show args) ++ "]"
+        indent = ("  " ++)
 
-pkgString :: String -> String
-pkgString p = "haskellPackages.ghcWithPackages (h: [ h." ++ p ++ "])"
+pkgString :: [Pkg] -> String
+pkgString [Pkg p] = "haskellPackages.ghcWithPackages (h: [ h." ++ p ++ "])"
 
 recursiveHaskell :: [(Pkg, Mod)] -> String -> String
 recursiveHaskell []          base = base

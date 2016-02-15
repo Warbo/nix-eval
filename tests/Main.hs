@@ -81,7 +81,7 @@ checkFlags i = checkIO e (Just (show i))
 
 -- Run nix-shells inside nix-shells, each with different Haskell packages
 -- available, to make sure the environments are set up correctly
-checkNesting = checkIO expr (Just "True")
+checkNesting = checkIO' id expr (Just "True")
   where expr   = unwrap $$ runHaskell nested
         unwrap = qualified "System.IO.Unsafe" "unsafePerformIO"
         -- Runs a String of Haskell in a sub-process
@@ -97,29 +97,33 @@ checkNesting = checkIO expr (Just "True")
                 (Pkg "containers", Mod "Data.Graph"),
                 (Pkg "parsec",     Mod "Text.Parsec")]
         -- This value should be propagated up through each putStrLn
-        base = "main = putStrLn \"True\""
+        base = "main = putStr \"True\""
 
 -- Helpers
 
-checkIO :: Expr -> Maybe String -> Property
-checkIO i o = once $ monadicIO $ do
-  monitor (counterexample (show ("expression", i)))
+checkIO' :: (a -> Expr) -> a -> Maybe String -> Property
+checkIO' pre i o = once $ monadicIO $ do
+  monitor (counterexample (show ("expression", pre i)))
   monitor (counterexample (show ("expected",   o)))
-  result <- run $ eval ("show" $$ i)
+  result <- run $ eval (pre i)
   monitor (counterexample (show ("result", result)))
   assert (result == o)
+
+checkIO :: Expr -> Maybe String -> Property
+checkIO i o = checkIO' ("show" $$) i o
 
 mkHaskell :: Pkg -> Mod -> String -> String
 mkHaskell p (Mod m) str = unlines [
           "import System.Process",
           "main = System.Process.readProcess",
-          indent (show "nix-shell"),
+          indent (show cmd),
           indent args',
           indent (show inner ++ " >>= putStrLn")]
   where inner = "import " ++ m ++ "\n" ++ str
-        args  = ["-p", mkGhcPkg [p], "--run", "runhaskell"]
         args' = "[" ++ intercalate "," (map show args) ++ "]"
         indent = ("  " ++)
+        (cmd, args) = mkCmd expr
+        expr = withPkgs [p] $ withMods [Mod m] $ "undefined"
 
 pkgString :: [Pkg] -> String
 pkgString [Pkg p] = "haskellPackages.ghcWithPackages (h: [ h." ++ p ++ "])"

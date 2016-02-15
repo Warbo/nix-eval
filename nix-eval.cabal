@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                nix-eval
-version:             0.3.0.2
+version:             0.3.1.0
 synopsis:            Evaluate Haskell expressions using Nix to get packages
 description:         Evaluate Haskell expressions using Nix to get packages
 homepage:            http://chriswarbo.net/git/nix-eval
@@ -15,6 +15,7 @@ category:            Language
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
+data-files:          wrapper.sh
 
 library
   exposed-modules:     Language.Eval.Internal

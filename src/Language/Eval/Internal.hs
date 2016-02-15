@@ -22,8 +22,10 @@ module Language.Eval.Internal where
 import Data.Char
 import Data.List
 import Data.String
+import Paths_nix_eval (getDataFileName)
 import System.Exit
 import System.IO
+import System.IO.Unsafe
 import System.Process
 
 -- We're stringly typed, with a veneer of safety
@@ -107,17 +109,31 @@ buildCmd x = let (cmd, args) = mkCmd x
 
 hPutContents h c = hPutStr h c >> hClose h
 
+-- | Construct the nix-shell command. We use wrapper.sh as a layer of
+--   indirection, to work around bugs.
 mkCmd :: Expr -> (String, [String])
-mkCmd x = ("nix-shell", ["--show-trace", "--run", run, "-p", mkGhcPkg pkgs])
+mkCmd x = ("nix-shell", ["--show-trace", "--run", cmd, "-p", mkGhcPkg pkgs])
   where pkgs = ePkgs x
         run  = unwords ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
+        cmd  = wrapCmd run pkgs
+
+wrapCmd c ps = wrapperPath ++ " " ++ show c ++ " " ++ show (pkgsToName ps)
+
+wrapperPath :: String
+{-# NOINLINE wrapperPath #-}
+wrapperPath = unsafePerformIO (getDataFileName "wrapper.sh")
 
 -- The prefix "h." is arbitrary, as long as it matches the argument "h:"
 mkGhcPkg ps = overrideName ghc name
   where pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
         ghc  = concat ["haskellPackages.ghcWithPackages ",
                        "(h: [", unwords pkgs, "])"]
-        name = "ghc-with-" ++ intercalate "-" pkgs
+        name  = pkgsToName ps
+
+pkgsToName [] = "ghc-env"
+pkgsToName ps = "ghc-env-with-" ++ intercalate "-" (map clean pkgs)
+  where pkgs  = map (\(Pkg p) -> p) ps
+        clean = filter isAlphaNum
 
 -- | Avoid calling everything "ghc", since that breaks nesting (Nix sees that
 --   "ghc" is already available, so doesn't bother building the new environment)

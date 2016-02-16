@@ -92,8 +92,8 @@ eval' f x = do
 runCmdStdIO :: CreateProcess -> String -> IO (String, ExitCode)
 runCmdStdIO c i = do (Just hIn, Just hOut, Nothing, hProc) <- createProcess c
                      hPutContents hIn i
-                     code <- waitForProcess hProc
                      out  <- System.IO.Strict.hGetContents hOut
+                     code <- waitForProcess hProc
                      return (out, code)
 
 buildInput f x = unlines (map mkImport mods ++ ePreamble x ++ [f expr])

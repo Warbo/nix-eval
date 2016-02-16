@@ -28,42 +28,12 @@ export PATH=$DIR:$PATH
 # Now we can run the given command
 debugMsg "Running command '$CMD'"
 
-F=$(mktemp -t "nix-eval-XXXXX.hs")
-F_EXE=$(echo "$F" | rev | cut -d . -f 2- | rev)
-
-debugMsg "Writing input to '$F'"
-INPUT=$(tee "$F")
-
+INPUT=$(cat)
 debugMsg "Evaluating:\n\n$INPUT\n---\n"
 
-debugMsg "Running '$CMD -o \"$F_EXE\" \"$F\"'"
-GHC_OUTPUT=$($CMD -o "$F_EXE" "$F")
-CODE="$?"
-
-debugMsg "Compiler output:\n\n$GHC_OUTPUT\n\n"
-
-[[ "$CODE" -eq 0 ]] || {
-    debugMsg "Failed to compile"
-    exit "$CODE"
-}
-
-[[ -f "$F_EXE" ]] || {
-    debugMsg "No such file '$F_EXE'"
-    exit 1
-}
-
-debugMsg "Running '$F_EXE'"
-: | "$F_EXE"
+echo "$INPUT" | $CMD
 CODE="$?"
 
 debugMsg "Finished; exit code was '$CODE'"
-
-debugMsg "Removing '$F'"
-rm "$F"
-
-debugMsg "Removing '$F_EXE'"
-rm -f "$F_EXE"
-
-debugMsg "Done"
 
 exit "$CODE"

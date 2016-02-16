@@ -115,7 +115,7 @@ hPutContents h c = hPutStr h c >> hClose h
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--show-trace", "--run", cmd, "-p", mkGhcPkg pkgs])
   where pkgs = nub $ ePkgs x
-        run  = unwords ("ghc --make" : map (\(Flag x) -> x) (nub $ eFlags x))
+        run  = unwords ("runhaskell" : map (\(Flag x) -> x) (nub $ eFlags x))
         cmd  = wrapCmd run pkgs
 
 wrapCmd c ps = "sh " ++ wrapperPath ++ " " ++ show c ++ " " ++ show (pkgsToName ps)

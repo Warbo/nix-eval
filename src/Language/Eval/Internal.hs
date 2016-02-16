@@ -25,6 +25,7 @@ import Data.String
 import Paths_nix_eval (getDataFileName)
 import System.Exit
 import System.IO
+import qualified System.IO.Strict
 import System.IO.Unsafe
 import System.Process
 
@@ -92,7 +93,7 @@ runCmdStdIO :: CreateProcess -> String -> IO (String, ExitCode)
 runCmdStdIO c i = do (Just hIn, Just hOut, Nothing, hProc) <- createProcess c
                      hPutContents hIn i
                      code <- waitForProcess hProc
-                     out  <- hGetContents   hOut
+                     out  <- System.IO.Strict.hGetContents hOut
                      return (out, code)
 
 buildInput f x = unlines (map mkImport mods ++ ePreamble x ++ [f expr])

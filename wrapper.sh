@@ -35,4 +35,5 @@ else
     INPUT=$(cat)
     debugMsg "Evaluating:\n\n$INPUT\n---\n"
     echo "$INPUT" | $CMD
+    debugMsg "Finished"
 fi

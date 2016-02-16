@@ -96,7 +96,7 @@ runCmdStdIO c i = do (Just hIn, Just hOut, Nothing, hProc) <- createProcess c
                      return (out, code)
 
 buildInput f x = unlines (map mkImport mods ++ ePreamble x ++ [f expr])
-  where mods  = eMods x
+  where mods  = nub $ eMods x
         expr  = eExpr x
 
 buildCmd :: Expr -> CreateProcess
@@ -113,8 +113,8 @@ hPutContents h c = hPutStr h c >> hClose h
 --   indirection, to work around bugs.
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--show-trace", "--run", cmd, "-p", mkGhcPkg pkgs])
-  where pkgs = ePkgs x
-        run  = unwords ("runhaskell" : map (\(Flag x) -> x) (eFlags x))
+  where pkgs = nub $ ePkgs x
+        run  = unwords ("runhaskell" : map (\(Flag x) -> x) (nub $ eFlags x))
         cmd  = wrapCmd run pkgs
 
 wrapCmd c ps = "sh " ++ wrapperPath ++ " " ++ show c ++ " " ++ show (pkgsToName ps)

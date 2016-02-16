@@ -53,7 +53,7 @@ debugMsg "Compiler output:\n\n$GHC_OUTPUT\n\n"
 }
 
 debugMsg "Running '$F_EXE'"
-"$F_EXE"
+: | "$F_EXE"
 CODE="$?"
 
 debugMsg "Finished; exit code was '$CODE'"

@@ -82,7 +82,8 @@ eval = eval' mkHs
 --   if you want an alternative to the default "main = putStr (..)" behaviour.
 eval' :: (String -> String) -> Expr -> IO (Maybe String)
 eval' f x = do
-  (out, code) <- runCmdStdIO (buildCmd x) (buildInput f x)
+  cmd <- decideCmd x
+  (out, code) <- runCmdStdIO cmd (buildInput f x)
   case code of
     ExitSuccess   -> return $ Just (trim out)
     ExitFailure _ -> hPutStr stderr out >> return Nothing
@@ -100,45 +101,73 @@ buildInput f x = unlines (map mkImport mods ++ ePreamble x ++ [f expr])
   where mods  = nub $ eMods x
         expr  = eExpr x
 
-buildCmd :: Expr -> CreateProcess
-buildCmd x = let (cmd, args) = mkCmd x
-              in (proc cmd args) {
-                std_in  = CreatePipe,
-                std_out = CreatePipe,
-                std_err = Inherit
-              }
+decideCmd :: Expr -> IO CreateProcess
+decideCmd x = do
+  newEnv <- needNewEnv (nub $ ePkgs x)
+  return (buildCmd (if newEnv then mkCmd      x
+                              else noShellCmd x))
+
+buildCmd (cmd, args) = (proc cmd args) {
+                         std_in  = CreatePipe,
+                         std_out = CreatePipe,
+                         std_err = Inherit
+                       }
+
+noShellCmd :: Expr -> (String, [String])
+noShellCmd x = ("runhaskell", map (\(Flag x) -> x) (nub $ eFlags x))
 
 hPutContents h c = hPutStr h c >> hClose h
 
 -- | Construct the nix-shell command. We use wrapper.sh as a layer of
---   indirection, to work around bugs.
+--   indirection, to work around buggy environments.
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--show-trace", "--run", cmd, "-p", mkGhcPkg pkgs])
-  where pkgs = nub $ ePkgs x
-        run  = unwords ("runhaskell" : map (\(Flag x) -> x) (nub $ eFlags x))
-        cmd  = wrapCmd run pkgs
+  where pkgs     = nub $ ePkgs x
+        (rh, fs) = noShellCmd x
+        run      = unwords (rh : fs)
+        cmd      = wrapCmd run pkgs
 
 wrapCmd c ps = "sh " ++ wrapperPath ++ " " ++ show c ++ " " ++ show (pkgsToName ps)
 
-wrapperPath :: String
+wrapperPath :: FilePath
 {-# NOINLINE wrapperPath #-}
 wrapperPath = unsafePerformIO (getDataFileName "wrapper.sh")
 
--- The prefix "h." is arbitrary, as long as it matches the argument "h:"
-mkGhcPkg ps = overrideName ghc name
-  where pkgs = map (\(Pkg p) -> "(h." ++ p ++ ")") ps
-        ghc  = concat ["haskellPackages.ghcWithPackages ",
-                       "(h: [", unwords pkgs, "])"]
-        name  = pkgsToName ps
+ghcEnvWithPkgsPath :: FilePath
+{-# NOINLINE ghcEnvWithPkgsPath #-}
+ghcEnvWithPkgsPath = unsafePerformIO (getDataFileName "ghcEnvWithPkgs.nix")
 
+-- | Creates a Nix expression which will use ghcEnvWithPkgs.nix to make a
+--   Haskell environment containing all of the given packages
+mkGhcPkg ps = env ++ " { name = " ++ name ++ "; pkgNames = " ++ args ++ "; }"
+  where env  = "import " ++ show ghcEnvWithPkgsPath
+        args = "[ " ++ intercalate " " pkgs ++ " ]"
+        pkgs = map (\(Pkg p) -> show p) ps
+        name = show (pkgsToName ps)
+
+-- | This creates a name for our Haskell environment. We make it here once, and
+--   pass it into both Nix and wrapper.sh, to ensure consistency
 pkgsToName [] = "ghc-env"
 pkgsToName ps = "ghc-env-with-" ++ intercalate "-" (map clean pkgs)
   where pkgs  = map (\(Pkg p) -> p) ps
         clean = filter isAlphaNum
 
--- | Avoid calling everything "ghc", since that breaks nesting (Nix sees that
---   "ghc" is already available, so doesn't bother building the new environment)
-overrideName p n = "(buildEnv { name=" ++ show n ++ ";paths=[(" ++ p ++ ")];})"
+-- | Check if all of the required packages are already available, i.e. whether
+--   we need to create a new Haskell environment
+havePkgs :: [Pkg] -> IO Bool
+havePkgs []         = return True
+havePkgs (Pkg p:ps) = do
+  out <- readProcess "ghc-pkg" ["--simple-output", "list", p] ""
+  if p `isInfixOf` out
+     then havePkgs ps
+     else return False
+
+-- | Do we need to create a new Haskell environment, because we don't have
+--   GHC available or because the packages we need aren't available?
+needNewEnv ps = do
+  hgp <- haveGhcPkg
+  if hgp then fmap not (havePkgs ps)
+         else return True
 
 mkImport :: Mod -> String
 mkImport (Mod m) = "import " ++ m
@@ -151,11 +180,17 @@ mkHs e = "main = putStr (" ++ e ++ ")"
 trim :: String -> String
 trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
+-- | Check if a shell command is available
+haveCommand c = do
+  (c, _, _) <- readCreateProcessWithExitCode (shell ("hash " ++ c)) ""
+  return (c == ExitSuccess)
+
 -- | Check if the `nix-shell` command is available via the shell
 haveNix :: IO Bool
-haveNix = do
-  (c, _, _) <- readCreateProcessWithExitCode (shell "hash nix-shell") ""
-  return (c == ExitSuccess)
+haveNix = haveCommand "nix-shell"
+
+-- | Check if the `ghc-pkg` command is available via the shell
+haveGhcPkg = haveCommand "ghc-pkg"
 
 -- User-facing combinators
 

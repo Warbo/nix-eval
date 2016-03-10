@@ -31,8 +31,12 @@ debugMsg "Running command '$CMD'"
 INPUT=$(cat)
 debugMsg "Evaluating:\n\n$INPUT\n---\n"
 
-echo "$INPUT" | $CMD
+OUTPUT=$(echo "$INPUT" | $CMD)
 CODE="$?"
+
+debugMsg "Output:\n\n$OUTPUT"
+
+echo "$OUTPUT"
 
 debugMsg "Finished; exit code was '$CODE'"
 

@@ -110,7 +110,7 @@ checkIO' pre i o = once $ monadicIO $ do
   assert (result == o)
 
 checkIO :: Expr -> Maybe String -> Property
-checkIO i o = checkIO' ("show" $$) i o
+checkIO = checkIO' ("show" $$)
 
 mkHaskell :: Pkg -> Mod -> String -> String
 mkHaskell p (Mod m) str = unlines [
@@ -123,7 +123,7 @@ mkHaskell p (Mod m) str = unlines [
         args' = "[" ++ intercalate "," (map show args) ++ "]"
         indent = ("  " ++)
         (cmd, args) = mkCmd expr
-        expr = withPkgs [p] $ withMods [Mod m] $ "undefined"
+        expr = withPkgs [p] . withMods [Mod m] $ "undefined"
 
 pkgString :: [Pkg] -> String
 pkgString [Pkg p] = "haskellPackages.ghcWithPackages (h: [ h." ++ p ++ "])"

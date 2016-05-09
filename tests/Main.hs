@@ -82,8 +82,7 @@ checkFlags i = checkIO e (Just (show i))
 -- Run nix-shells inside nix-shells, each with different Haskell packages
 -- available, to make sure the environments are set up correctly
 checkNesting = checkIO' id expr (Just "True")
-  where expr   = unwrap $$ runHaskell nested
-        unwrap = qualified "System.IO.Unsafe" "unsafePerformIO"
+  where expr   = unsafe $$ runHaskell nested
         -- Runs a String of Haskell in a sub-process
         runHaskell s = ((process $$ asString "runhaskell") $$ "[]") $$ asString s
         process    = withPkgs ["process"] $ qualified "System.Process" "readProcess"
@@ -101,12 +100,14 @@ checkNesting = checkIO' id expr (Just "True")
 
 -- Helpers
 
-checkIO' :: (a -> Expr) -> a -> Maybe String -> Property
+-- | `checkIO' gen x s` runs `gen x` to get an `Expr`, evaluates it, and asserts
+--   that the result equals `s`
+checkIO' :: Show a => (a -> Expr) -> a -> Maybe String -> Property
 checkIO' pre i o = once $ monadicIO $ do
-  monitor (counterexample (show ("expression", pre i)))
-  monitor (counterexample (show ("expected",   o)))
+  dbg (("expression", pre i),
+       ("expected",   o))
   result <- run $ eval (pre i)
-  monitor (counterexample (show ("result", result)))
+  dbg ("result", result)
   assert (result == o)
 
 checkIO :: Expr -> Maybe String -> Property
@@ -131,3 +132,8 @@ pkgString [Pkg p] = "haskellPackages.ghcWithPackages (h: [ h." ++ p ++ "])"
 recursiveHaskell :: [(Pkg, Mod)] -> String -> String
 recursiveHaskell []          base = base
 recursiveHaskell ((p, m):xs) base = mkHaskell p m (recursiveHaskell xs base)
+
+unsafe = qualified "System.IO.Unsafe" "unsafePerformIO"
+
+dbg :: (Monad m, Show a) => a -> PropertyM m ()
+dbg = monitor . counterexample . show

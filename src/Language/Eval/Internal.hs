@@ -82,7 +82,7 @@ eval = eval' mkHs
 --   if you want an alternative to the default "main = putStr (..)" behaviour.
 eval' :: (String -> String) -> Expr -> IO (Maybe String)
 eval' f x = do
-  cmd <- decideCmd x
+  cmd         <- decideCmd x
   (out, code) <- runCmdStdIO cmd (buildInput f x)
   case code of
     ExitSuccess   -> return $ Just (trim out)
@@ -114,7 +114,9 @@ buildCmd (cmd, args) = (proc cmd args) {
                        }
 
 noShellCmd :: Expr -> (String, [String])
-noShellCmd x = ("runhaskell", map (\(Flag x) -> x) (nub $ eFlags x))
+noShellCmd x = ("sh", wrapCmd' x)
+
+flagsOf x = map (\(Flag x) -> x) (nub $ eFlags x)
 
 hPutContents h c = hPutStr h c >> hClose h
 
@@ -123,11 +125,11 @@ hPutContents h c = hPutStr h c >> hClose h
 mkCmd :: Expr -> (String, [String])
 mkCmd x = ("nix-shell", ["--show-trace", "--run", cmd, "-p", mkGhcPkg pkgs])
   where pkgs     = nub $ ePkgs x
-        (rh, fs) = noShellCmd x
-        run      = unwords (rh : fs)
-        cmd      = wrapCmd run pkgs
+        cmd      = unwords (map shellEscape ("sh" : wrapCmd' x ++ [show (pkgsToName pkgs)]))
 
-wrapCmd c ps = "sh " ++ wrapperPath ++ " " ++ show c ++ " " ++ show (pkgsToName ps)
+shellEscape s = if ' ' `elem` s then show s else s
+
+wrapCmd' x = [wrapperPath, unwords . ("runhaskell" :) . flagsOf $ x]
 
 wrapperPath :: FilePath
 {-# NOINLINE wrapperPath #-}

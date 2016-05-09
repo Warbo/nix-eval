@@ -9,24 +9,30 @@ function debugMsg {
     [[ -z "$NIX_EVAL_DEBUG" ]] || echo -e "nix-eval: $1" 1>&2
 }
 
-# The PATH may not be set up correctly, which we work around by finding the bin
-# directory for the package with given NAME (e.g. "ghc-env-with-text") and
-# putting it to the front of PATH
+if [[ -n "$2" ]]
+then
+    # If we're running in a nested nix-shell, the PATH may not be set up
+    # correctly. To work around this, we accept the desired environment's name
+    # as $2 (e.g. "ghc-env-with-text") and look for it in PATH. If found, we
+    # push it to the front of PATH, so its binaries (`ghc`, etc.) will be used.
 
-NAME="$2"
+    NAME="$2"
 
-debugMsg "Looking for Haskell environment '$NAME'"
+    debugMsg "Looking for Haskell environment '$NAME'"
 
-DIR=$(echo "$PATH" | grep -o -- "[^:]*${NAME}/[^:]*") || {
-    echo "Couldn't find $NAME in PATH: $PATH" 1>&2
-    exit 1
-}
+    DIR=$(echo "$PATH" | grep -o -- "[^:]*${NAME}/[^:]*") || {
+        echo "Couldn't find $NAME in PATH: $PATH" 1>&2
+        exit 1
+    }
 
-debugMsg "Moving '$DIR' to the front of PATH" 1>&2
-export PATH=$DIR:$PATH
+    debugMsg "Moving '$DIR' to the front of PATH" 1>&2
+    export PATH=$DIR:$PATH
+fi
 
 # Now we can run the given command
 debugMsg "Running command '$CMD'"
+
+debugMsg "PATH is $PATH"
 
 INPUT=$(cat)
 

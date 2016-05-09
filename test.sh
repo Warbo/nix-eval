@@ -39,7 +39,19 @@ function testBuildable {
     then
         echo "ok - $MSG"
     else
-        echo "$OUTPUT"
+        msg "$OUTPUT"
+        echo "not ok - $MSG"
+        return 1
+    fi
+}
+
+function testSuite {
+    MSG="Haskell test suite passes"
+    if OUTPUT=$(cabal test 2>&1)
+    then
+        echo "ok - $MSG"
+    else
+        msg "$OUTPUT"
         echo "not ok - $MSG"
         return 1
     fi
@@ -98,7 +110,9 @@ function testIndent {
 # Invocation
 
 function testPreconditions {
-    testBuildable && testHaveDataDir
+    testBuildable &&
+    testSuite     &&
+    testHaveDataDir
 }
 
 function runTests {

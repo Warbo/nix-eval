@@ -4,10 +4,6 @@ function msg {
     echo -e "$*" 1>&2
 }
 
-function fail {
-    msg "FAIL: $*"
-}
-
 function interpret {
     cabal repl -v0 --ghc-option=-XOverloadedStrings
 }
@@ -67,7 +63,7 @@ function testEval {
     then
         echo "ok - $MSG"
     else
-        fail "Unexpected output '$OUTPUT'"
+        msg "Unexpected output '$OUTPUT'"
         echo "not ok - $MSG"
         return 1
     fi
@@ -80,16 +76,23 @@ function testDebug {
     then
         echo "ok - $MSG"
     else
-        echo "No debug info on stderr: '$OUTPUT'"
+        msg "No debug info on stderr: '$OUTPUT'"
         echo "not ok - $MSG"
         return 1
     fi
 }
 
 function testIndent {
-    msg "Checking expressions get indented"
+    MSG="Checking expressions get indented"
     OUTPUT=$(getStderr)
-    echo "Indent output: $OUTPUT"
+    if echo "$OUTPUT" | grep "Running hindent on given input" > /dev/null
+    then
+        echo "ok - $MSG"
+    else
+        msg "No indentation detected: '$OUTPUT'"
+        echo "not ok - $MSG"
+        return 1
+    fi
 }
 
 # Invocation
@@ -107,7 +110,7 @@ function runTests {
 export NIX_EVAL_DEBUG=1
 export nix_eval_datadir="$(dirname "$(readlink -f "$0")")"
 
-# If these fail, we bail out
+# If these fail, our tests are unrunnable so we bail out
 testPreconditions || exit 1
 
 msg "Testing expression without external dependencies"

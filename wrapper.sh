@@ -29,6 +29,14 @@ export PATH=$DIR:$PATH
 debugMsg "Running command '$CMD'"
 
 INPUT=$(cat)
+
+# Use hindent if available, so error message line numbers are more specific
+if command -v hindent > /dev/null
+then
+    debugMsg "Running hindent on given input:\n\n$INPUT"
+    INPUT=$(echo "$INPUT" | hindent --style fundamental)
+fi
+
 debugMsg "Evaluating:\n\n$INPUT\n---\n"
 
 OUTPUT=$(echo "$INPUT" | $CMD)

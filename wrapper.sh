@@ -34,13 +34,17 @@ debugMsg "Running command '$CMD'"
 
 debugMsg "PATH is $PATH"
 
-INPUT=$(cat)
+ORIG_INPUT=$(cat)
+INPUT="$ORIG_INPUT"
 
 # Use hindent if available, so error message line numbers are more specific
 if command -v hindent > /dev/null
 then
     debugMsg "Running hindent on given input:\n\n$INPUT"
-    INPUT=$(echo "$INPUT" | hindent --style fundamental)
+    INPUT=$(echo "$ORIG_INPUT" | hindent --style fundamental) || {
+        echo "WARNING: hindent failed!"
+        INPUT="$ORIG_INPUT"
+    }
 fi
 
 debugMsg "Evaluating:\n\n$INPUT\n---\n"

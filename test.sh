@@ -28,6 +28,7 @@ function getStdout {
 }
 
 function getStderr {
+    # shellcheck disable=SC2069
     run 2>&1 1>/dev/null
 }
 
@@ -122,7 +123,9 @@ function runTests {
 }
 
 export NIX_EVAL_DEBUG=1
-export nix_eval_datadir="$(dirname "$(readlink -f "$0")")"
+
+nix_eval_datadir="$(dirname "$(readlink -f "$0")")"
+export nix_eval_datadir
 
 # If these fail, our tests are unrunnable so we bail out
 testPreconditions || exit 1

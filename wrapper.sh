@@ -4,9 +4,16 @@
 # of flags set.
 CMD="$1"
 
+function shouldDebug {
+    [[ -n "$NIX_EVAL_DEBUG" ]]
+}
+
 function debugMsg {
     # Debug output, if requested
-    [[ -z "$NIX_EVAL_DEBUG" ]] || echo -e "nix-eval: $1" 1>&2
+    if shouldDebug
+    then
+        echo -e "nix-eval: $1" 1>&2
+    fi
 }
 
 if [[ -n "$2" ]]
@@ -37,8 +44,9 @@ debugMsg "PATH is $PATH"
 ORIG_INPUT=$(cat)
 INPUT="$ORIG_INPUT"
 
-# Use hindent if available, so error message line numbers are more specific
-if command -v hindent > /dev/null
+# If we're debugging, use hindent if available, so error message line numbers
+# are more specific
+if shouldDebug && command -v hindent > /dev/null
 then
     debugMsg "Running hindent on given input:\n\n$INPUT"
     INPUT=$(echo "$ORIG_INPUT" | hindent --style fundamental) || {

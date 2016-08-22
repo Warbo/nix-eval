@@ -110,14 +110,25 @@ function testIndent {
 
 function testHaskellOverride {
     MSG="Check we can override Haskell package set"
-    echo "FIXME: make temp file with overrides, set it as env, then check it's used, e.g. by putting a 'trace' in the override"
+
+    OLD=""
+    if [[ -n "$NIX_EVAL_HASKELL_PKGS" ]]
+    then
+        echo "Wrapping existing package set '$NIX_EVAL_HASKELL_PKGS'" 1>&2
+        F="$NIX_EVAL_HASKELL_PKGS"
+        OLD="$NIX_EVAL_HASKELL_PKGS"
+    else
+        echo "Wrapping default package set" 1>&2
+        F=$(mktemp --tmpdir "nix-eval-test-overrides-XXXXX.nix")
+        echo 'with import <nixpkgs> {}; haskellPackages' > "$F"
+    fi
+
     NIX_EVAL_HASKELL_PKGS=$(mktemp --tmpdir "nix-eval-test-overrides-XXXXX.nix")
     export NIX_EVAL_HASKELL_PKGS
     echo "Using overrides '$NIX_EVAL_HASKELL_PKGS'" 1>&2
 
     SENTINEL="sentinel-$RANDOM"
-    NIX_EXPR="builtins.trace \"$SENTINEL\" (import <nixpkgs> {}).haskellPackages"
-    echo "$NIX_EXPR" > "$NIX_EVAL_HASKELL_PKGS"
+    echo "builtins.trace \"$SENTINEL\" (import $F)" > "$NIX_EVAL_HASKELL_PKGS"
 
     OUTPUT=$(getStdErr)
     if echo "$OUTPUT" | grep "trace: $SENTINEL" > /dev/null
@@ -125,10 +136,18 @@ function testHaskellOverride {
         echo "ok - $MSG"
     else
         msg "Sentinel '$SENTINEL' from '$NIX_EVAL_HASKELL_PKGS' not spotted"
+        echo -e "START OUTPUT\n\n$OUTPUT\n\nEND OUTPUT" 1>&2
     fi
 
     rm -f "$NIX_EVAL_HASKELL_PKGS"
-    unset NIX_EVAL_HASKELL_PKGS
+
+    if [[ -n "$OLD" ]]
+    then
+        NIX_EVAL_HASKELL_PKGS="$OLD"
+        export NIX_EVAL_HASKELL_PKGS
+    else
+        unset NIX_EVAL_HASKELL_PKGS
+    fi
 }
 
 # Invocation

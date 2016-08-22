@@ -24,10 +24,10 @@ function run {
 }
 
 function getStdout {
-    run 2>/dev/null
+    run
 }
 
-function getStderr {
+function getStdErr {
     # shellcheck disable=SC2069
     run 2>&1 1>/dev/null
 }
@@ -84,7 +84,7 @@ function testEval {
 
 function testDebug {
     MSG="Checking nix-eval gives debug info (PKG=$PKG)"
-    OUTPUT=$(getStderr)
+    OUTPUT=$(getStdErr)
     if echo "$OUTPUT" | grep "^nix-eval: Evaluating:" > /dev/null
     then
         echo "ok - $MSG"
@@ -97,7 +97,7 @@ function testDebug {
 
 function testIndent {
     MSG="Checking expressions get indented"
-    OUTPUT=$(getStderr)
+    OUTPUT=$(getStdErr)
     if echo "$OUTPUT" | grep "Running hindent on given input" > /dev/null
     then
         echo "ok - $MSG"
@@ -106,6 +106,29 @@ function testIndent {
         echo "not ok - $MSG"
         return 1
     fi
+}
+
+function testHaskellOverride {
+    MSG="Check we can override Haskell package set"
+    echo "FIXME: make temp file with overrides, set it as env, then check it's used, e.g. by putting a 'trace' in the override"
+    NIX_EVAL_HASKELL_PKGS=$(mktemp --tmpdir "nix-eval-test-overrides-XXXXX.nix")
+    export NIX_EVAL_HASKELL_PKGS
+    echo "Using overrides '$NIX_EVAL_HASKELL_PKGS'" 1>&2
+
+    SENTINEL="sentinel-$RANDOM"
+    NIX_EXPR="builtins.trace \"$SENTINEL\" (import <nixpkgs> {}).haskellPackages"
+    echo "$NIX_EXPR" > "$NIX_EVAL_HASKELL_PKGS"
+
+    OUTPUT=$(getStdErr)
+    if echo "$OUTPUT" | grep "trace: $SENTINEL" > /dev/null
+    then
+        echo "ok - $MSG"
+    else
+        msg "Sentinel '$SENTINEL' from '$NIX_EVAL_HASKELL_PKGS' not spotted"
+    fi
+
+    rm -f "$NIX_EVAL_HASKELL_PKGS"
+    unset NIX_EVAL_HASKELL_PKGS
 }
 
 # Invocation
@@ -120,6 +143,7 @@ function runTests {
     testEval
     testDebug
     testIndent
+    testHaskellOverride
 }
 
 export NIX_EVAL_DEBUG=1

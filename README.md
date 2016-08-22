@@ -29,11 +29,13 @@ When evaluated, the Haskell code is prefixed by an import of each module, the
 piped into `runhaskell`. If any flags are specified, they are appended as
 arguments to the `runhaskell` command.
 
-The `runhaskell` process itself is invoked via the `nix-shell` command, using
-Nix's standard `haskellPackages.ghcWithPackages` function to ensure that all of
-the given packages are available. This means package names must correspond to
-the names used by Nix (which are usually the same as Hackage); it also means you
-can supply your own private packages using Nix overrides.
+The `runhaskell` process itself is invoked via the `nix-shell` command, which
+provides all of the required packages via the `ghcWithPackages` mechanism of
+nixpkgs. Packages are taken from nixpkgs's `haskellPackages` set by default,
+which can be overridden by setting the `NIX_EVAL_HASKELL_PKGS` environment
+variable to the path of a Nix file. Note that the package names used in your
+Haskell code should correspond to the keys in this package set, which might
+differ from those used on Hackage.
 
 If the process exits successfully, its stdout will be returned wrapped in
 `Just`; otherwise `Nothing` is returned. If you wish to alter the `main`

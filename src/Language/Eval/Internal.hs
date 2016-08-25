@@ -123,9 +123,12 @@ hPutContents h c = hPutStr h c >> hClose h
 -- | Construct the nix-shell command. We use wrapper.sh as a layer of
 --   indirection, to work around buggy environments.
 mkCmd :: Expr -> (String, [String])
-mkCmd x = ("nix-shell", ["--show-trace", "--run", cmd, "-p", mkGhcPkg pkgs])
-  where pkgs     = nub $ ePkgs x
-        cmd      = unwords (map shellEscape ("sh" : wrapCmd' x ++ [show (pkgsToName pkgs)]))
+mkCmd x = ("nix-shell", ["--show-trace", "--run", cmdLine x, "-p", pkgOf x])
+
+pkgOf = mkGhcPkg . nub . ePkgs
+
+cmdLine x = unwords (map shellEscape ("sh" : wrapCmd' x ++ [show (pkgsToName pkgs)]))
+  where pkgs = nub $ ePkgs x
 
 shellEscape s = if ' ' `elem` s then show s else s
 

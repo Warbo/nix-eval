@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                nix-eval
-version:             0.3.2.6
+version:             0.3.2.7
 synopsis:            Evaluate Haskell expressions using Nix to get packages
 description:         Evaluate Haskell expressions using Nix to get packages
 homepage:            http://chriswarbo.net/git/nix-eval

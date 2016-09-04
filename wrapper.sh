@@ -48,11 +48,19 @@ INPUT="$ORIG_INPUT"
 # are more specific
 if shouldDebug && command -v hindent > /dev/null
 then
-    debugMsg "Running hindent on given input:\n\n$INPUT"
-    INPUT=$(echo "$ORIG_INPUT" | hindent --style fundamental) || {
-        echo "WARNING: hindent failed!"
-        INPUT="$ORIG_INPUT"
-    }
+    debugMsg "Trying hindent on given input:\n\n$INPUT"
+    if command -v timeout > /dev/null
+    then
+        INPUT=$(echo "$ORIG_INPUT" | timeout 20 hindent --style fundamental) || {
+            echo "WARNING: hindent failed!"
+            INPUT="$ORIG_INPUT"
+        }
+    else
+        INPUT=$(echo "$ORIG_INPUT" | hindent --style fundamental) || {
+            echo "WARNING: hindent failed!"
+            INPUT="$ORIG_INPUT"
+        }
+    fi
 fi
 
 debugMsg "Evaluating:\n\n$INPUT\n---\n"

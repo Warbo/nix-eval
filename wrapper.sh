@@ -52,12 +52,12 @@ then
     if command -v timeout > /dev/null
     then
         INPUT=$(echo "$ORIG_INPUT" | timeout 20 hindent --style fundamental) || {
-            echo "WARNING: hindent failed!"
+            echo "WARNING: hindent failed!" 1>&2
             INPUT="$ORIG_INPUT"
         }
     else
         INPUT=$(echo "$ORIG_INPUT" | hindent --style fundamental) || {
-            echo "WARNING: hindent failed!"
+            echo "WARNING: hindent failed!" 1>&2
             INPUT="$ORIG_INPUT"
         }
     fi

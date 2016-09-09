@@ -179,7 +179,7 @@ mkImport (Mod m) = "import " ++ m
 
 -- | Turn an expression into a Haskell module, complete with imports and `main`
 mkHs :: String -> String
-mkHs e = "main = putStr (" ++ e ++ ")"
+mkHs e = "main = Prelude.putStr (" ++ e ++ ")"
 
 -- | Strip leading and trailing whitespace
 trim :: String -> String

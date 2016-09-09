@@ -98,7 +98,7 @@ function testDebug {
 function testIndent {
     MSG="Checking expressions get indented"
     OUTPUT=$(getStdErr)
-    if echo "$OUTPUT" | grep "Running hindent on given input" > /dev/null
+    if echo "$OUTPUT" | grep "Trying hindent on given input" > /dev/null
     then
         echo "ok - $MSG"
     else

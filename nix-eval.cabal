@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                nix-eval
-version:             0.3.2.10
+version:             0.3.3.0
 synopsis:            Evaluate Haskell expressions using Nix to get packages
 description:         Evaluate Haskell expressions using Nix to get packages
 homepage:            http://chriswarbo.net/git/nix-eval
@@ -23,10 +23,10 @@ library
                      , Language.Eval
   other-modules:       Paths_nix_eval
   -- other-extensions:    
-  build-depends:       base >=4.8
+  build-depends:       base >=4.8 && < 4.10
                      , process
                      , strict
-                     , hindent
+                     , hindent >= 4.0
   hs-source-dirs:      src
   default-language:    Haskell2010
 

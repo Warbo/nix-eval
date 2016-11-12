@@ -9,12 +9,12 @@ What sets this package apart from other `eval` implementations, is the ability
 to control which packages and modules are available during evaluation. This is
 achieved by calling out to the [Nix package manager](http://nixos.org/nix).
 
-# Implementation Details
+## Implementation Details
 
 `Expr` is the type of expressions, which contains a list of package names, a
 list of modules to import, a list of compiler flags, a list of `String`s to
 put in the generated module and a `String` of Haskell code to evaluate. All of
-these are just `String`s internally, but we use wrappers prevent accidentally
+these are just `String`s internally, but we use wrappers to prevent accidentally
 using packages as modules, etc.
 
 A few combinators are provided for common manipulations, for example
@@ -55,7 +55,7 @@ This is also why we return the contents of stdout, rather than trying to parse
 it into a more appropriate type: it's not our place to choose how the result
 should be parsed, so we avoid the problem; by that point, our job is done.
 
-# Limitations
+## Limitations
 
  - Since evaluation takes place in a separate GHC process, there can be no
    sharing of data outside the strings provided (unless you provide a separate

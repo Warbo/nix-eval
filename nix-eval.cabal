@@ -18,6 +18,10 @@ cabal-version:       >=1.10
 data-files:          wrapper.sh
                    , ghcEnvWithPkgs.nix
 
+source-repository head
+  type:     git
+  location: http://chriswarbo.net/git/nix-eval.git
+
 library
   exposed-modules:     Language.Eval.Internal
                      , Language.Eval

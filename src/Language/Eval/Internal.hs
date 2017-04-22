@@ -145,7 +145,7 @@ ghcEnvWithPkgsPath = unsafePerformIO (getDataFileName "ghcEnvWithPkgs.nix")
 -- | Creates a Nix expression which will use ghcEnvWithPkgs.nix to make a
 --   Haskell environment containing all of the given packages
 mkGhcPkg ps = env ++ " { name = " ++ name ++ "; pkgNames = " ++ args ++ "; }"
-  where env  = "import " ++ show ghcEnvWithPkgsPath
+  where env  = "(import <nixpkgs> {}).callPackage " ++ show ghcEnvWithPkgsPath
         args = "[ " ++ unwords pkgs ++ " ]"
         pkgs = map (\(Pkg p) -> show p) ps
         name = show (pkgsToName ps)

@@ -1,0 +1,9 @@
+From: Chris Warburton
+Date: Wed, 04 Apr 2018 15:07:42 +0100
+State: new
+Subject: Run test.sh as part of release.nix builds
+Message-Id: <f1e2ebd7b3584764-0-artemis@nixos>
+
+I've stubbed out a runCommand invocation to do this, but it will need to
+have appropriate buildInputs, etc. taken from the relevant nixpkgs and
+haskellPackages sets (if possible).

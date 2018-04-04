@@ -12,11 +12,23 @@ with {
 with builtins;
 with unstablePkgs.nixpkgs1709.lib;
 with rec {
+  testScript = pkgs: pkgs.runCommand "nix-eval-test-script"
+    {
+      src = ./.;
+    }
+  ''
+    mkdir "$out"
+    echo "FIXME: Skipping test script" 1>&2
+    #"$src/test.sh" 2> >(tee "$out/stderr" >&2) | tee "$out/stdout"
+  '';
+
+  withTests = pkgs: mapAttrs (_: pkgs.withDeps [ (testScript pkgs) ]);
+
   # "self" is a customised nixpkgs set, "super" is the corresponding original
   buildForNixpkgs = self: super: mapAttrs (_: buildForHaskell self)
                                           super.haskell.packages;
 
-  buildForHaskell = pkgs: hsPkgs: {
+  buildForHaskell = pkgs: hsPkgs: withTests pkgs {
     # Uses Haskell package set provided by nixpkgs
     nixpkgsDeps  = hsPkgs.callPackage (pkgs.runCabal2nix { url = ./.; }) {};
 

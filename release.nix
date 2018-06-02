@@ -19,6 +19,7 @@ with rec {
 with pkgs.lib;
 {
   release = pkgs.haskellRelease {
+    name        = "nix-eval";
     dir         = ./.;
     haskellKeep = hsVersion: !(hasPrefix "ghcjs"          hsVersion ||
                                hasPrefix "lts"            hsVersion ||

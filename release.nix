@@ -5,15 +5,14 @@ with builtins;
 with {
   helpersSrc = (import <nixpkgs> {}).fetchgit {
     url    = http://chriswarbo.net/git/nix-helpers.git;
-    rev    = "42156fb";
-    sha256 = "0pc88y1gbli2f8f54yg070ghpm4r1j3mkj6xkmphj189s9lsv1f7";
+    rev    = "d012fd6";
+    sha256 = "1lbjsn2z6d80df8qw7izsiszpdvj6bmpy179pqar9gdfgwlbl9rv";
   };
 };
 
 with import helpersSrc;
 collapseAttrs (haskellRelease {
-  name            = "nix-eval";
-  dir             = ./.;
-  haskellVersions = [ "ghc7103" ];
-  nixpkgsVersions = [ "nixpkgs1709" "nixpkgs1803" ];
+  name        = "nix-eval";
+  dir         = ./.;
+  hackageSets = { nixpkgs1709 = [ "ghc7103" ]; };
 })

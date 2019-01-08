@@ -48,7 +48,7 @@ INPUT="$ORIG_INPUT"
 # are more specific
 if shouldDebug && command -v hindent > /dev/null
 then
-    debugMsg "Trying hindent on given input:\n\n$INPUT"
+    debugMsg "Trying hindent on given input:\\n\\n$INPUT"
     if command -v timeout > /dev/null
     then
         INPUT=$(echo "$ORIG_INPUT" | timeout 20 hindent --style fundamental) || {
@@ -63,12 +63,12 @@ then
     fi
 fi
 
-debugMsg "Evaluating:\n\n$INPUT\n---\n"
+debugMsg "Evaluating:\\n\\n$INPUT\\n---\\n"
 
 OUTPUT=$(echo "$INPUT" | $CMD)
 CODE="$?"
 
-debugMsg "Output:\n\n$OUTPUT"
+debugMsg "Output:\\n\\n$OUTPUT"
 
 echo "$OUTPUT"
 

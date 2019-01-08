@@ -136,7 +136,7 @@ function testHaskellOverride {
         echo "ok - $MSG"
     else
         msg "Sentinel '$SENTINEL' from '$NIX_EVAL_HASKELL_PKGS' not spotted"
-        echo -e "START OUTPUT\n\n$OUTPUT\n\nEND OUTPUT" 1>&2
+        echo -e "START OUTPUT\\n\\n$OUTPUT\\n\\nEND OUTPUT" 1>&2
     fi
 
     rm -f "$NIX_EVAL_HASKELL_PKGS"

@@ -1,0 +1,18 @@
+From: Chris Warburton
+Date: Thu, 27 Jun 2019 11:57:22 +0100
+State: resolved
+Subject: Bump dependency versions
+Message-Id: <a0e54963a192e53d-0-artemis@nixos>
+resolution: fixed
+
+Would be nice to run on newer GHC and Nixpkgs versions.
+
+Using newer cabal versions (2.4) seems to require specifying the
+component for 'cabal repl', i.e. we can't do 'cabal repl' we need to do
+'cabal repl lib:nix-eval', which is a big naff.
+
+Bumping to Nixpkgs 19.03 gives us GHC 8.6.4, but this package set seems
+to fail the test.sh script, due to some test failures of the
+microlens-aeson package. It *seems* like these might be too specific,
+e.g. saying that '[4, 7]' doesn't match '[7, 4]'; perhaps they meant to
+use set equality rather than list equality?

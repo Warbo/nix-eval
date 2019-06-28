@@ -29,4 +29,27 @@ with super.lib;
       }))
       super.haskell.packages;
   };
+
+  haskellPackages =
+    with rec {
+      stripNums     = replaceStrings (stringToCharacters "0123456789")
+                                     ["" "" "" "" "" "" "" "" "" ""];
+
+      normalVersion = name: stripNums name == "ghc";
+
+      wanted      = hs: hs.ghc.version == super.haskellPackages.ghc.version;
+
+      ghcMatches  = name: normalVersion name &&
+                          wanted (getAttr name super.haskell.packages);
+
+      ghcVersions = filter ghcMatches (attrNames self.haskell.packages);
+    };
+    if length ghcVersions == 1
+       then getAttr (head ghcVersions) self.haskell.packages
+       else abort (toJSON {
+         error     = "Couldn't guess package set to use for haskellPackages";
+         wantedGHC = super.haskellPackages.ghc.version;
+         allSets   = attrNames self.haskell.packages;
+         guessed   = ghcVersions;
+       });
 }

@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+# Use nix-shell if it's available, and we're not already
+if command -v nix-shell > /dev/null && [[ -z "$IN_NIX_SHELL" ]]
+then
+    SCRIPT=$(readlink -f "$0")
+    cd "$(dirname "$SCRIPT")"
+    exec nix-shell --run "./$(basename "$SCRIPT")"
+fi
+
 function msg {
     echo -e "$*" 1>&2
 }

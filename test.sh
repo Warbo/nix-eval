@@ -5,12 +5,12 @@ function msg {
 }
 
 function interpret {
-    cabal repl -v0 --ghc-option=-XOverloadedStrings
+    cabal repl -v0 --ghc-option=-XOverloadedStrings lib:nix-eval
 }
 
 function expression {
     EXPR='("head" $$ (("(:)" $$ ("show" $$ "True")) $$ "[]"))'
-    PKGS="(withPkgs [\"pandoc\"] $EXPR)"
+    PKGS="(withPkgs [\"natural-numbers\"] $EXPR)"
     if [[ PKG -eq 1 ]]
     then
         echo "eval $PKGS"

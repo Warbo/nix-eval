@@ -42,6 +42,21 @@ function getStdErr {
 
 # Tests
 
+function testRelease {
+    # nix_release from http://chriswarbo.net/git/nix-helpers will build all
+    # derivations specified in release.nix
+    command -v nix_release > /dev/null || return 0
+    MSG="Building contents of release.nix"
+    if OUTPUT=$(nix_release 2>&1)
+    then
+        echo "ok - $MSG"
+    else
+        msg "$OUTPUT"
+        echo "not ok - $MSG"
+        return 1
+    fi
+}
+
 function testBuildable {
     MSG="Building nix-eval"
     if OUTPUT=$(cabal build 2>&1)
@@ -161,6 +176,7 @@ function testHaskellOverride {
 # Invocation
 
 function testPreconditions {
+    testRelease   &&
     testBuildable &&
     testSuite     &&
     testHaveDataDir
